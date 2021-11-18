@@ -5,7 +5,6 @@ const app = express();
 const { v4: uuidv4 } = require('uuid')
 const server = http.createServer(app);
 const cors = require("cors");
-const { log } = require("console");
 const twilio = require("twilio");
 const io = (require('socket.io')(server, {
     cors: {
@@ -48,7 +47,7 @@ app.get('/api/get-turn-credentials', (req, res)=>{
     try {
         client.tokens.create().then(token =>{
             responseToken=token;
-            res.send({token})
+            res.send({token});
         });
 
     }
