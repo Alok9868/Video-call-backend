@@ -1,4 +1,4 @@
-// require('dotenv').config();
+require('dotenv').config();
 const express = require("express");
 const http = require("http");
 const app = express();
@@ -41,13 +41,14 @@ app.get('/api/room-exists/:roomID', function (req, res) {
     }
 });
 app.get('/api/get-turn-credentials', (req, res)=>{
-    const accountSid='AC9755fb99fc3dd5e67ed46247b0896df2';
-    const authToken='485725694e6d3438ca1a37c23072d223';
+    const accountSid=process.env.ACCOUNT_SID;
+    const authToken=process.env.AUTH_TOKEN;
     const client=twilio(accountSid, authToken);
     let responseToken = null;
     try {
         client.tokens.create().then(token =>{
             responseToken=token;
+            console.log('successfully get token');
             res.send({token})
         });
 
