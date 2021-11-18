@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid')
 const server = http.createServer(app);
 const cors = require("cors");
 const { log } = require("console");
+const twilio = require("twilio");
 const io = (require('socket.io')(server, {
     cors: {
         origin: 'http://localhost:3000',
@@ -38,7 +39,25 @@ app.get('/api/room-exists/:roomID', function (req, res) {
         // res.status(400);
         res.send({ roomExists: false });
     }
-})
+});
+app.get('/api/get-turn-credentials', (req, res)=>{
+    const accountSid='AC9755fb99fc3dd5e67ed46247b0896df2';
+    const authToken='485725694e6d3438ca1a37c23072d223';
+    const client=twilio(accountSid, authToken);
+    let responseToken = null;
+    try {
+        client.tokens.create().then(token =>{
+            responseToken=token;
+            res.send({token})
+        });
+
+    }
+    catch(err){
+        console.log('error occured when fetching turn server credentials');
+        console.log(err);
+        res.send({token:null});
+    }
+});
 
 io.on('connection', socket => {
 
@@ -57,82 +76,15 @@ io.on('connection', socket => {
         disconnectHandler(socket);
     });
     socket.on('conn-signal', (data) => {
-        console.log('connections is coming from server', data);
         signallingHandler(socket, data);
     });
     socket.on('conn-init', (data) => {
 
           initializeConnectionHandler(socket, data);
-
-
+    });
+    socket.on('send-message', (data) => {
+        messageHandler(socket, data);
     })
-
-
-    // socket.on('search-room', ({ roomID }) => {
-    //     const room = rooms.find((room) => room.id === roomID);
-    //     if (room) {
-    //         if (room.connectedUsers.length > 3) {
-    //             console.log('room is full');
-    //             socket.emit('room-full');
-    //         }
-    //         else {
-    //             const newuser = {
-    //                 id: nanoid(),
-    //                 socketId: socket.id,
-    //                 roomID
-    //             }
-    //             room.connectedUsers.push(newuser);
-    //             socket.join(roomID);
-    //             connectedUsers = [...connectedUsers, newuser];
-    //             //establishing peer connection
-
-    //             room.connectedUsers.forEach((user) => {
-    //                 if (user.socketId !== socket.id) {
-    //                     const data = {
-    //                         connectedusersocketid: socket.id,
-    //                     };
-    //                     io.to(user.socketId).emit('conn-prepare', data);
-    //                 }
-
-    //             });
-
-
-    //             io.to(roomID).emit('room-update', {connectedUsers:room.connectedUsers});
-    //         }
-
-    //     }
-    //     else {
-    //         const newuser = {
-    //             id: nanoid(),
-    //             socketId: socket.id,
-    //             roomID
-    //         }
-    //         connectedUsers= [...connectedUsers, newuser];
-    //         //create new room
-    //         const newroom = {
-    //             id: roomID,
-    //             connectedUsers: [newuser]
-    //         }
-    //         // join socket io room
-
-    //         socket.join(roomID);
-    //         rooms = [...rooms, newroom];
-    //         // emit to the client new room is created
-    //         socket.emit('newRoom-created', roomID);
-    //         socket.emit('room-update',{connectedUsers: newroom.connectedUsers});
-    //     }
-
-
-
-    //     socket.on('conn-signal', data => {
-    //         const { connectedusersocketid, signal } = data;
-    //         const signalingData = { signal, connectedusersocketid: socket.id };
-    //         io.to(connectedusersocketid).emit('conn-signal', signalingData);
-    //     })
-
-    //    
-
-    // });
 
 });
 const createNewRoomHandler = (socket, data) => {
@@ -234,6 +186,15 @@ const initializeConnectionHandler = (socket,data) => {
     const {connUserSocketId}=data;
     const initData ={connUserSocketId:socket.id};
      io.to(connUserSocketId).emit('conn-init', initData);
+
+}
+const messageHandler = (socket,data) => {
+    const user = connectedUsers.find(user => user.socketId === socket.id);
+    if(user)
+    {
+        io.to(user.roomId).emit('new-message', data);
+    }
+    
 
 }
 
