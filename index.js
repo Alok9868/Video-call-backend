@@ -48,7 +48,6 @@ app.get('/api/get-turn-credentials', (req, res)=>{
     try {
         client.tokens.create().then(token =>{
             responseToken=token;
-            console.log('successfully get token');
             res.send({token})
         });
 
