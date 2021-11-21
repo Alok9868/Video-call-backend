@@ -39,28 +39,38 @@ app.get('/api/room-exists/:roomID', function (req, res) {
         res.send({ roomExists: false });
     }
 });
-app.get('/api/get-turn-credentials', (req, res)=>{
-    const accountSid=process.env.ACCOUNT_SID;
-    const authToken=process.env.AUTH_TOKEN;
-    const client=twilio(accountSid, authToken);
+app.get('/api/get-turn-credentials', (req, res) => {
+    const accountSid = process.env.ACCOUNT_SID;
+    const authToken = process.env.AUTH_TOKEN;
+    const client = twilio(accountSid, authToken);
     let responseToken = null;
     try {
-        client.tokens.create().then(token =>{
-            responseToken=token;
-            res.send({token});
+        client.tokens.create().then(token => {
+            responseToken = token;
+            res.send({ token });
         });
 
     }
-    catch(err){
+    catch (err) {
         console.log('error occured when fetching turn server credentials');
         console.log(err);
-        res.send({token:null});
+        res.send({ token: null });
     }
 });
 
+app.get('/api/:socketId',(req, res) => {
+    const {socketId} = req.params;
+    const user=connectedUsers.filter(user => user.socketId === socketId);
+    if(user)
+    {
+        res.send({ name:user[0].identity });
+    }
+    else{
+        res.send({ name:"" });
+    }
+})
+
 io.on('connection', socket => {
-
-
 
     socket.on('create-new-room', data => {
         // console.log('host is creating new room', data);
@@ -79,7 +89,7 @@ io.on('connection', socket => {
     });
     socket.on('conn-init', (data) => {
 
-          initializeConnectionHandler(socket, data);
+        initializeConnectionHandler(socket, data);
     });
     socket.on('send-message', (data) => {
         messageHandler(socket, data);
@@ -96,7 +106,6 @@ const createNewRoomHandler = (socket, data) => {
         identity: identity,
         socketId: socket.id,
         roomId,
-
     };
     connectedUsers = [...connectedUsers, newuser];
     //create new room
@@ -164,7 +173,7 @@ const disconnectHandler = (socket) => {
         //emit an event to rest of users that this user have left the room
 
         if (room.connectedUsers.length > 0) {
-            io.to(room.id).emit('user-disconnected',{socketId: socket.id})
+            io.to(room.id).emit('user-disconnected', { socketId: socket.id })
             io.to(room.id).emit('room-update', {
                 connectedUsers: room.connectedUsers
             });
@@ -181,19 +190,18 @@ const signallingHandler = (socket, data) => {
     io.to(connUserSocketId).emit('conn-signal', signalingData);
 
 }
-const initializeConnectionHandler = (socket,data) => {
-    const {connUserSocketId}=data;
-    const initData ={connUserSocketId:socket.id};
-     io.to(connUserSocketId).emit('conn-init', initData);
+const initializeConnectionHandler = (socket, data) => {
+    const { connUserSocketId } = data;
+    const initData = { connUserSocketId: socket.id };
+    io.to(connUserSocketId).emit('conn-init', initData);
 
 }
-const messageHandler = (socket,data) => {
+const messageHandler = (socket, data) => {
     const user = connectedUsers.find(user => user.socketId === socket.id);
-    if(user)
-    {
+    if (user) {
         io.to(user.roomId).emit('new-message', data);
     }
-    
+
 
 }
 
