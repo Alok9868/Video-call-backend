@@ -58,15 +58,14 @@ app.get('/api/get-turn-credentials', (req, res) => {
     }
 });
 
-app.get('/api/:socketId',(req, res) => {
-    const {socketId} = req.params;
-    const user=connectedUsers.filter(user => user.socketId === socketId);
-    if(user)
-    {
-        res.send({ name:user[0].identity });
+app.get('/api/:socketId', (req, res) => {
+    const { socketId } = req.params;
+    const user = connectedUsers.filter(user => user.socketId === socketId);
+    if (user) {
+        res.send({ name: user[0].identity });
     }
-    else{
-        res.send({ name:"" });
+    else {
+        res.send({ name: "" });
     }
 })
 
@@ -93,7 +92,10 @@ io.on('connection', socket => {
     });
     socket.on('send-message', (data) => {
         messageHandler(socket, data);
-    })
+    });
+    socket.on('direct-message', (data) => {
+        directMessageHandler(socket, data);
+    });
 
 });
 const createNewRoomHandler = (socket, data) => {
@@ -201,6 +203,27 @@ const messageHandler = (socket, data) => {
     if (user) {
         io.to(user.roomId).emit('new-message', data);
     }
+
+
+}
+const directMessageHandler = (socket, data) => {
+    if (connectedUsers.find(user => user.socketId === data.recieverSocketId)) {
+        const recieverData = {
+            authorSocketId: socket.id,
+            messageContent: data.messageContent,
+            isAuthor: false,
+            identity: data.identity
+        }
+        socket.to(data.recieverSocketId).emit('direct-message', recieverData);
+        const authorData = {
+            recieverSocketId: data.recieverSocketId,
+            messageContent: data.messageContent,
+            isAuthor: true,
+            identity: data.identity
+        }
+        socket.emit('direct-message', authorData);
+    };
+
 
 
 }
